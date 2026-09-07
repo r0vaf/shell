@@ -64,6 +64,28 @@ CustomMouseArea {
     hoverEnabled: true
 
     onPressed: event => dragStart = Qt.point(event.x, event.y)
+
+    // Click-outside-to-close for launcher/session/sidebar (was HyprlandFocusGrab,
+    // a Hyprland-only Wayland protocol with no equivalent on rill). Reuses the
+    // panel-geometry helpers above. Dashboard/OSD/utilities already close via
+    // onContainsMouseChanged below when the mouse leaves the window entirely --
+    // this covers the separate "opened by keybind, click elsewhere to dismiss"
+    // case those don't.
+    onClicked: event => {
+        if (fullscreen)
+            return;
+        const x = event.x;
+        const y = event.y;
+
+        if (screenState.launcher && Config.launcher.enabled && !inBottomPanel(panels.launcher, x, y))
+            screenState.launcher = false;
+
+        if (screenState.session && Config.session.enabled && !inRightPanel(panels.sessionWrapper, x, y))
+            screenState.session = false;
+
+        if (screenState.sidebar && Config.sidebar.enabled && !inRightPanel(panels.sidebar, x, y) && !inRightPanel(panels.sessionWrapper, x, y))
+            screenState.sidebar = false;
+    }
     onContainsMouseChanged: {
         if (!containsMouse) {
             // Only hide if not activated by shortcut

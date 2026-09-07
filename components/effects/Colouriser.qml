@@ -3,6 +3,7 @@ import QtQuick.Effects
 import qs.components
 
 MultiEffect {
+    layer.enabled: true
     property color sourceColor: "black"
 
     colorization: 1

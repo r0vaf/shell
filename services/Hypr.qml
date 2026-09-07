@@ -2,228 +2,80 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
+import Quickshell.Wayland
 import Quickshell.Io
-import Caelestia
-import Caelestia.Config
-import Caelestia.Internal
-import qs.components.misc
 
+// Replacement for the original Hyprland-backed Hypr.qml, ported for rill/river.
+//
+// Same public property/method surface as the original, so the ~20 consuming
+// files elsewhere in the shell need little or no change. Real data where a
+// source exists (window list, via wlr-foreign-toplevel-management), safe
+// stubs everywhere else (workspaces, monitors, keyboard state) since rill
+// currently exposes no protocol or IPC channel for that.
+//
+// dispatch() is a logged no-op: there is no control socket into rill (no
+// riverctl-equivalent exists), so every UI action that used to call
+// Hypr.dispatch(...) (workspace switch by clicking a pill, move/pin/kill
+// window, DPMS toggle) currently does nothing but log what it *would* have
+// sent. Search this file's callers for Hypr.dispatch to find and wire up
+// each action individually once/if rill grows a control channel.
 Singleton {
     id: root
 
-    readonly property var toplevels: Hyprland.toplevels
-    readonly property var workspaces: Hyprland.workspaces
-    readonly property var monitors: Hyprland.monitors
-    readonly property bool usingLua: Hyprland.usingLua
-
-    readonly property HyprlandToplevel activeToplevel: {
-        const t = Hyprland.activeToplevel;
-        return t?.workspace?.name.startsWith("special:") || Hyprland.focusedWorkspace?.toplevels.values.length > 0 ? t : null;
+    // --- window list: real data, via wlr-foreign-toplevel-management ---
+    // Requires zwlr_foreign_toplevel_manager_v1. Confirmed via `wayland-info`
+    // that rill does NOT currently advertise this, so `toplevels.values` will
+    // be an empty list until/unless that changes. Left wired up rather than
+    // stubbed so it starts working automatically if that ever changes.
+    readonly property var toplevels: ToplevelManager.toplevels
+    readonly property var activeToplevel: {
+        for (const t of toplevels.values ?? [])
+            if (t.activated)
+                return t;
+        return null;
     }
-    readonly property HyprlandWorkspace focusedWorkspace: Hyprland.focusedWorkspace
-    readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
-    readonly property int activeWsId: focusedWorkspace?.id ?? 1
 
-    readonly property HyprKeyboard keyboard: extras.devices.keyboards.find(kb => kb.main) ?? null
-    readonly property bool capsLock: keyboard?.capsLock ?? false
-    readonly property bool numLock: keyboard?.numLock ?? false
-    readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
-    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
-    readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
-    readonly property var kbMap: new Map()
+    // --- workspaces/monitors: no data source on rill, stubbed empty ---
+    readonly property var workspaces: ({ values: [] })
+    readonly property var monitors: ({ values: [] })
+    readonly property var focusedWorkspace: null
+    readonly property var focusedMonitor: null
+    readonly property int activeWsId: 1
+    readonly property bool usingLua: false
 
-    readonly property alias extras: extras
-    readonly property alias options: extras.options
-    readonly property alias devices: extras.devices
+    function monitorFor(screen): var {
+        return null;
+    }
 
-    property bool hadKeyboard
-    property string lastSpecialWorkspace: ""
+    // --- keyboard state: no source wired yet ---
+    // TODO: original read this via a native Hyprland IPC plugin
+    // (hyprdevices.cpp). On rill this would need to come from libinput/evdev
+    // directly -- not wired up yet, so caps/num lock indicators and layout
+    // will just show their default/off state.
+    readonly property bool capsLock: false
+    readonly property bool numLock: false
+    readonly property string defaultKbLayout: "??"
+    readonly property string kbLayoutFull: "Unknown"
+    readonly property string kbLayout: "??"
+
+    // --- extras/options/devices: minimal stub so property access doesn't crash ---
+    readonly property var extras: QtObject {
+        id: extrasObj
+
+        readonly property var options: QtObject {}
+        readonly property var devices: QtObject {
+            readonly property var keyboards: []
+        }
+        function refreshDevices(): void {}
+        function batchMessage(msgs): void {}
+    }
+    readonly property alias options: extrasObj.options
+    readonly property alias devices: extrasObj.devices
 
     signal configReloaded
 
+    // Logged no-op. See file header -- no control channel into rill exists yet.
     function dispatch(request: string): void {
-        Hyprland.dispatch(request);
-    }
-
-    function cycleSpecialWorkspace(direction: string): void {
-        const openSpecials = workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0);
-
-        if (openSpecials.length === 0)
-            return;
-
-        const activeSpecial = focusedMonitor.lastIpcObject.specialWorkspace.name ?? "";
-
-        if (!activeSpecial) {
-            if (lastSpecialWorkspace) {
-                const workspace = workspaces.values.find(w => w.name === lastSpecialWorkspace);
-                if (workspace && workspace.lastIpcObject.windows > 0) {
-                    dispatch(usingLua ? `hl.dsp.focus({ workspace = "${lastSpecialWorkspace}" })` : `workspace ${lastSpecialWorkspace}`);
-                    return;
-                }
-            }
-            dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[0].name}" })` : `workspace ${openSpecials[0].name}`);
-            return;
-        }
-
-        const currentIndex = openSpecials.findIndex(w => w.name === activeSpecial);
-        let nextIndex = 0;
-
-        if (currentIndex !== -1) {
-            if (direction === "next")
-                nextIndex = (currentIndex + 1) % openSpecials.length;
-            else
-                nextIndex = (currentIndex - 1 + openSpecials.length) % openSpecials.length;
-        }
-
-        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[nextIndex].name}" })` : `workspace ${openSpecials[nextIndex].name}`);
-    }
-
-    function monitorNames(): list<string> {
-        return monitors.values.map(e => e.name);
-    }
-
-    function monitorFor(screen: ShellScreen): HyprlandMonitor {
-        return Hyprland.monitorFor(screen);
-    }
-
-    function reloadDynamicConfs(): void {
-        if (usingLua) {
-            extras.batchMessage(['eval hl.bind("Caps_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })', 'eval hl.bind("Num_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })']);
-        } else {
-            extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
-        }
-    }
-
-    Component.onCompleted: reloadDynamicConfs()
-
-    onCapsLockChanged: {
-        if (!GlobalConfig.utilities.toasts.capsLockChanged)
-            return;
-
-        if (capsLock)
-            Toaster.toast(qsTr("Caps lock enabled"), qsTr("Caps lock is currently enabled"), "keyboard_capslock_badge");
-        else
-            Toaster.toast(qsTr("Caps lock disabled"), qsTr("Caps lock is currently disabled"), "keyboard_capslock");
-    }
-
-    onNumLockChanged: {
-        if (!GlobalConfig.utilities.toasts.numLockChanged)
-            return;
-
-        if (numLock)
-            Toaster.toast(qsTr("Num lock enabled"), qsTr("Num lock is currently enabled"), "looks_one");
-        else
-            Toaster.toast(qsTr("Num lock disabled"), qsTr("Num lock is currently disabled"), "timer_1");
-    }
-
-    onKbLayoutFullChanged: {
-        if (hadKeyboard && GlobalConfig.utilities.toasts.kbLayoutChanged)
-            Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayoutFull), "keyboard");
-
-        hadKeyboard = !!keyboard;
-    }
-
-    Connections {
-        function onRawEvent(event: HyprlandEvent): void {
-            const n = event.name;
-            if (n.endsWith("v2"))
-                return;
-
-            if (n === "configreloaded") {
-                root.configReloaded();
-                root.reloadDynamicConfs();
-            } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
-                Hyprland.refreshWorkspaces();
-                Hyprland.refreshMonitors();
-            } else if (["openwindow", "closewindow", "movewindow"].includes(n)) {
-                Hyprland.refreshToplevels();
-                Hyprland.refreshWorkspaces();
-            } else if (n.includes("mon")) {
-                Hyprland.refreshMonitors();
-            } else if (n.includes("workspace")) {
-                Hyprland.refreshWorkspaces();
-            } else if (n.includes("window") || n.includes("group") || ["pin", "fullscreen", "changefloatingmode", "minimize"].includes(n)) {
-                Hyprland.refreshToplevels();
-            }
-        }
-
-        target: Hyprland
-    }
-
-    Connections {
-        function onLastIpcObjectChanged(): void {
-            const specialName = root.focusedMonitor.lastIpcObject.specialWorkspace.name;
-
-            if (specialName && specialName.startsWith("special:")) {
-                root.lastSpecialWorkspace = specialName;
-            }
-        }
-
-        target: root.focusedMonitor
-    }
-
-    FileView {
-        id: kbLayoutFile
-
-        path: Quickshell.env("CAELESTIA_XKB_RULES_PATH") || "/usr/share/X11/xkb/rules/base.lst"
-        onLoaded: {
-            const layoutMatch = text().match(/! layout\n([\s\S]*?)\n\n/);
-            if (layoutMatch) {
-                const lines = layoutMatch[1].split("\n");
-                for (const line of lines) {
-                    if (!line.trim() || line.trim().startsWith("!"))
-                        continue;
-
-                    const match = line.match(/^\s*([a-z]{2,})\s+([a-zA-Z() ]+)$/);
-                    if (match)
-                        root.kbMap.set(match[2], match[1]);
-                }
-            }
-
-            const variantMatch = text().match(/! variant\n([\s\S]*?)\n\n/);
-            if (variantMatch) {
-                const lines = variantMatch[1].split("\n");
-                for (const line of lines) {
-                    if (!line.trim() || line.trim().startsWith("!"))
-                        continue;
-
-                    const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s+([a-z]{2,}): (.+)$/);
-                    if (match)
-                        root.kbMap.set(match[3], match[2]);
-                }
-            }
-        }
-    }
-
-    IpcHandler {
-        function refreshDevices(): void {
-            extras.refreshDevices();
-        }
-
-        function cycleSpecialWorkspace(direction: string): void {
-            root.cycleSpecialWorkspace(direction);
-        }
-
-        function listSpecialWorkspaces(): string {
-            return root.workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0).map(w => w.name).join("\n");
-        }
-
-        target: "hypr"
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "refreshDevices"
-        description: "Reload devices"
-        onPressed: extras.refreshDevices()
-        onReleased: extras.refreshDevices()
-    }
-
-    HyprExtras {
-        id: extras
-
-        usingLua: Hyprland.usingLua
+        console.warn("[Rill/Hypr stub] dispatch() called with no rill control channel, ignored:", request);
     }
 }

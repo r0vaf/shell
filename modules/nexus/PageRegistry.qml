@@ -15,13 +15,6 @@ QtObject {
         },
 
         // Connectivity
-        // TODO
-        // {
-        //     label: qsTr("Display"),
-        //     icon: "monitor",
-        //     description: qsTr("Output configuration"),
-        //     category: "connectivity"
-        // },
         {
             label: qsTr("Network"),
             icon: "wifi",
@@ -35,11 +28,25 @@ QtObject {
             category: "connectivity",
             noFill: true
         },
+
+        // Hardware — Display, Audio, and Power grouped together, above System
+        {
+            label: qsTr("Display"),
+            icon: "monitor",
+            description: qsTr("Output configuration, night light"),
+            category: "hardware"
+        },
         {
             label: qsTr("Audio"),
             icon: "volume_up",
             description: qsTr("App volumes, sound devices"),
-            category: "connectivity"
+            category: "hardware"
+        },
+        {
+            label: qsTr("Power"),
+            icon: "bolt",
+            description: qsTr("Power profile, idle, lock"),
+            category: "hardware"
         },
 
         // System

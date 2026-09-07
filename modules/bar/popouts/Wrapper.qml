@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
@@ -90,11 +89,15 @@ Item {
         onDetachRequested: mode => root.detach(mode)
     }
 
-    HyprlandFocusGrab {
-        active: root.isDetached
-        windows: [QsWindow.window]
-        onCleared: root.close()
-    }
+    // Was HyprlandFocusGrab, providing click-outside-to-close for this
+    // detached popout window. No equivalent exists on rill -- this needs a
+    // compositor-level input grab across ALL windows/surfaces, which a
+    // plain MouseArea can never provide (it only ever sees clicks within
+    // its own window). Unlike ContentWindow.qml's focus grab (fixed
+    // earlier with a MouseArea, since that surface genuinely covers the
+    // whole screen), this one has no simple substitute. Dropped rather
+    // than shipping wrong behavior; Escape (Keys.onEscapePressed above)
+    // still closes it.
 
     Binding {
         when: root.isDetached || (root.hasCurrent && root.currentName === "wirelesspassword")

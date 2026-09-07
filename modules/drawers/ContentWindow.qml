@@ -4,7 +4,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
@@ -21,7 +20,11 @@ StyledWindow {
 
     readonly property ScreenState screenState: ShellState.forScreen(screen)
 
-    readonly property HyprlandMonitor monitor: Hypr.monitorFor(screen)
+    // Was HyprlandMonitor-typed; Hypr.monitorFor() is a stub returning null on
+    // rill (no per-monitor workspace data source), so every property below
+    // that reads `monitor?....` safely falls back to its default via the
+    // existing optional chaining.
+    readonly property var monitor: Hypr.monitorFor(screen)
     readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject.specialWorkspace?.name.length ?? 0) > 0
     readonly property bool hasFullscreenOnNormalWs: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
     readonly property bool hasFullscreen: {
@@ -44,19 +47,34 @@ StyledWindow {
 
     property color surfaceColour: Colours.tPalette.m3surface
 
-    readonly property int dragMaskPadding: {
-        if (focusGrab.active || panels.popouts.isDetached)
-            return 0;
-
-        if (monitor?.lastIpcObject.specialWorkspace?.name || monitor?.activeWorkspace?.lastIpcObject.windows > 0)
-            return 0;
-
-        const thresholds = [];
-        for (const panel of ["dashboard", "launcher", "session", "sidebar"])
-            if (contentItem.Config[panel].enabled)
-                thresholds.push(contentItem.Config[panel].dragThreshold);
-        return Math.max(...thresholds);
+    // Was focusGrab.active -- same condition the removed HyprlandFocusGrab
+    // used to gate when it was active, kept as a plain computed property
+    // since dragMaskPadding below still needs it (this was a dangling
+    // reference to a since-removed id, a bug from the earlier edit).
+    readonly property bool anyDrawerOpen: {
+        const s = root.screenState;
+        const conf = root.contentItem.Config;
+        if ((s.launcher && conf.launcher.enabled) || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
+            return true;
+        if (!conf.dashboard.showOnHover && s.dashboard && conf.dashboard.enabled)
+            return true;
+        if (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
+            return true;
+        return false;
     }
+
+    // Was a hover-reveal convenience: shrink padding to 0 whenever the
+    // current workspace has real windows (checked via `monitor`), only
+    // padding out the edges on a genuinely empty desktop to make the bar
+    // easier to reach. `monitor` is always null under the rill stub (no
+    // live workspace/window data), so that check could never fire, and
+    // this fell through to a permanent nonzero value at every edge --
+    // creating a real click-dead-zone (most noticeable at the top, from
+    // the dashboard's threshold) where clicks reached neither the shell
+    // nor whatever window was actually there. Can't be fixed without the
+    // same window data the active-window widget is blocked on, so
+    // simplified to always 0 rather than ship a permanent dead zone.
+    readonly property int dragMaskPadding: 0
 
     onHasFullscreenChanged: {
         screenState.launcher = false;
@@ -109,30 +127,11 @@ StyledWindow {
         win: root
     }
 
-    HyprlandFocusGrab {
-        id: focusGrab
-
-        active: {
-            const s = root.screenState;
-            const conf = root.contentItem.Config;
-            if ((s.launcher && conf.launcher.enabled) || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
-                return true;
-            if (!conf.dashboard.showOnHover && s.dashboard && conf.dashboard.enabled)
-                return true;
-            if (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
-                return true;
-            return false;
-        }
-        windows: [root]
-        onCleared: {
-            root.screenState.launcher = false;
-            root.screenState.session = false;
-            root.screenState.sidebar = false;
-            root.screenState.dashboard = false;
-            panels.popouts.hasCurrent = false;
-            bar.closeTray();
-        }
-    }
+    // Click-outside-to-close for launcher/session/sidebar (was HyprlandFocusGrab)
+    // lives in Interactions.qml's onClicked instead of here -- a MouseArea at
+    // this level is unreachable, since Interactions is a full-window
+    // CustomMouseArea declared later (so painted on top) that accepts every
+    // click before anything beneath it ever sees one.
 
     StyledRect {
         anchors.fill: parent

@@ -10,8 +10,10 @@ import qs.modules.nexus.pages
 import qs.modules.nexus.pages.apps
 import qs.modules.nexus.pages.audio
 import qs.modules.nexus.pages.bluetooth
+import qs.modules.nexus.pages.display
 import qs.modules.nexus.pages.network
 import qs.modules.nexus.pages.panels
+import qs.modules.nexus.pages.power
 import qs.modules.nexus.pages.services
 import qs.modules.nexus.pages.wallandstyle
 import qs.modules.nexus.pages.panels.taskbar
@@ -80,6 +82,22 @@ QtObject {
                 }
             }
         },
+
+        // Hardware — Display, Audio, and Power grouped together, above System
+        Component {
+            // Display
+            StackPage {
+                Component {
+                    DisplayPage {}
+                }
+                Component {
+                    OutputSettings {}
+                }
+                Component {
+                    ArrangeDisplays {}
+                }
+            }
+        },
         Component {
             // Audio
             StackPage {
@@ -88,6 +106,14 @@ QtObject {
                 }
                 Component {
                     AppVolumes {}
+                }
+            }
+        },
+        Component {
+            // Power
+            StackPage {
+                Component {
+                    PowerPage {}
                 }
             }
         },

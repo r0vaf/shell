@@ -119,8 +119,6 @@ Item {
 
             anchors.fill: parent
             radius: dialogBg.radius
-            bottomLeftRadius: dialogBg.bottomLeftRadius
-            bottomRightRadius: dialogBg.bottomRightRadius
             level: 4
             opacity: 0
         }

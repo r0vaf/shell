@@ -148,6 +148,14 @@ ColumnLayout {
                 }
             }
             DelegateChoice {
+                roleValue: "favourites"
+                delegate: EntryWrapper {
+                    FavouriteApps {
+                        objectName: "taskbarFavourites"
+                    }
+                }
+            }
+            DelegateChoice {
                 roleValue: "tray"
                 delegate: EntryWrapper {
                     Tray {

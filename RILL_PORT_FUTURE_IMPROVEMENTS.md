@@ -96,3 +96,13 @@ own `NotificationServer`, see step-by-step doc), OSD, lock screen, session
 menu, all the hardware-service widgets (cpu/gpu/memory/disk/audio/battery/
 network/temperature/brightness) — none of that touches Hyprland at all in
 the original codebase, so none of it is affected by this port.
+
+## Revisit if rill ever gains protocol/IPC support
+
+If rill adds `zwlr_foreign_toplevel_manager_v1` support, or a rill-side
+status-socket gets built (previously considered, shelved), upstream's
+`cycleSpecialWorkspace()` and `toplevelsForWs()` in services/Hypr.qml
+(as of the caelestia-dots merge around 2026-09) are worth revisiting as
+a reference implementation -- discarded during this merge only because
+they depend entirely on Hyprland IPC that has no rill equivalent yet,
+not because the logic itself is bad.

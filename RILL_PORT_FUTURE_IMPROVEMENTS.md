@@ -106,3 +106,24 @@ status-socket gets built (previously considered, shelved), upstream's
 a reference implementation -- discarded during this merge only because
 they depend entirely on Hyprland IPC that has no rill equivalent yet,
 not because the logic itself is bad.
+
+Upstream bug fixed locally: missing <ranges> include
+plugin/src/Caelestia/Settings/listnode.cpp uses std::views::reverse but
+never includes <ranges> -- fails to compile on GCC 15.2/libstdc++ with
+"'std::views' has no member 'reverse'". Not rill/river-specific, a
+genuine upstream bug in the new Settings module (added in the
+2026-09-08 merge). Fixed by adding #include <ranges>. Consider
+reporting upstream; will need reapplying if this file gets rewritten
+again in a future merge.
+
+## Merge-conflict resolution error fixed: InputField.qml `char` reserved word
+
+During the 2026-09-08 merge, modules/lock/center/InputField.qml's
+conflict was resolved by taking upstream's version entirely (Loader-
+based lazy rendering is a real improvement, no river/rill dependency).
+This was wrong in one respect: it discarded a necessary bug fix from
+the original port -- `id: char` is invalid QML, since char is a
+reserved word. Reapplied the char -> charItem rename (14 occurrences)
+on top of upstream's restructuring. Lesson: when taking --theirs
+wholesale during a conflict, double check nothing in "our" side was a
+genuine bug fix rather than a stylistic/river-specific change.

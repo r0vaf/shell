@@ -48,5 +48,8 @@ else
   echo "WARNING: $DOTFILES_REPO/vendor/caelestia-shell not found -- skipped submodule bump."
 fi
 
-echo "==> Done. Remember: this only updates the repo. Rebuild/relaunch the"
-echo "    shell separately to actually run the new code."
+echo "==> Done. IMPORTANT: this only updated the git repo, not your build."
+echo "    The plugin/ C++ code may have changed -- rebuild it before relaunching:"
+echo "      cd $(pwd)/build && cmake --build . -j\$(nproc) && cmake --install ."
+echo "    Then: pkill quickshell (rill will respawn it)."
+echo "    Check ~/.rill.log if anything looks wrong after."

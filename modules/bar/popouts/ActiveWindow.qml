@@ -34,7 +34,7 @@ Item {
                 asynchronous: true
                 Layout.alignment: Qt.AlignVCenter
                 implicitSize: details.implicitHeight
-                source: Icons.getAppIcon(Hypr.activeToplevel?.lastIpcObject.class ?? "", "image-missing")
+                source: Icons.getAppIcon(Hypr.activeToplevel?.appId ?? "", "image-missing")
             }
 
             ColumnLayout {
@@ -52,7 +52,7 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: Hypr.activeToplevel?.lastIpcObject.class ?? ""
+                    text: Hypr.activeToplevel?.appId ?? ""
                     color: Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight
                 }
@@ -89,7 +89,7 @@ Item {
             ScreencopyView {
                 id: preview
 
-                captureSource: Hypr.activeToplevel?.wayland ?? null // qmllint disable unresolved-type
+                captureSource: Hypr.activeToplevel ?? null // qmllint disable unresolved-type
                 live: visible
 
                 constraintSize.width: Tokens.sizes.bar.windowPreviewSize

@@ -26,7 +26,7 @@ StyledWindow {
     // existing optional chaining.
     readonly property var monitor: Hypr.monitorFor(screen)
     readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject.specialWorkspace?.name.length ?? 0) > 0
-    readonly property bool hasFullscreenOnNormalWs: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
+    readonly property bool hasFullscreenOnNormalWs: Hypr.hasFullscreen(screen)
     readonly property bool hasFullscreen: {
         if (hasSpecialWorkspace) {
             const specialName = monitor?.lastIpcObject.specialWorkspace?.name;

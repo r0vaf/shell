@@ -78,4 +78,18 @@ Singleton {
     function dispatch(request: string): void {
         console.warn("[Rill/Hypr stub] dispatch() called with no rill control channel, ignored:", request);
     }
+
+    // True if any toplevel is fullscreen (on `screen` if given).
+    function hasFullscreen(screen = null): bool {
+        for (const t of toplevels.values ?? []) {
+            if (!t.fullscreen)
+                continue;
+            if (!screen || t.screens.length === 0)
+                return true;
+            for (let i = 0; i < t.screens.length; i++)
+                if (t.screens[i].name === screen.name)
+                    return true;
+        }
+        return false;
+    }
 }

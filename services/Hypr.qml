@@ -92,4 +92,17 @@ Singleton {
         }
         return false;
     }
+
+    // Stubs for upstream workspace APIs; rill exposes no workspace data.
+    function focusWorkspace(ws): void {}
+    function toggleSpecial(name: string): void {}
+    function trimWsName(name: string): string {
+        return name.startsWith("special:") ? name.slice(8) : name;
+    }
+    function toplevelsForWs(ws, ignoredTags = []): var {
+        return [];
+    }
+    function isToplevelIgnored(toplevel, ignoredTags = []): bool {
+        return !toplevel;
+    }
 }

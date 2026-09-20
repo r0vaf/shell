@@ -126,6 +126,7 @@ Item {
 
         sourceComponent: WindowList {
             screen: root.screen
+            onCloseRequested: root.close()
         }
     }
 

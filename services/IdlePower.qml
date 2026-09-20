@@ -116,47 +116,39 @@ Singleton {
     }
 
     function applyProfile(name: string): void {
-        const timeouts = (GlobalConfig.general.idle.timeouts ?? []).filter(t => !root.matches(t, "lock") && !root.matches(t, "dpms") && !root.matches(t, "suspend"));
+        // GlobalConfig.general.idle.timeouts is a typed list node
+        // (values/insert/remove), not a JS array.
+        const list = GlobalConfig.general.idle.timeouts;
+
+        // Drop the entries this service manages. Walk a snapshot from the end
+        // so indices stay valid while removing.
+        const current = list.values;
+        for (let i = current.length - 1; i >= 0; i--) {
+            const t = current[i];
+            if (root.matches(t, "lock") || root.matches(t, "dpms") || root.matches(t, "suspend"))
+                list.remove(i);
+        }
 
         const lock = root.getProfileTimeout(name, "lock");
         const dpms = root.getProfileTimeout(name, "dpms");
         const suspend = root.getProfileTimeout(name, "suspend");
 
         if (lock !== -1)
-            timeouts.push({
+            list.insert({
                 timeout: lock,
                 idleAction: "lock"
             });
         if (dpms !== -1)
-            timeouts.push({
+            list.insert({
                 timeout: dpms,
                 idleAction: "dpms off",
                 returnAction: "dpms on"
             });
         if (suspend !== -1)
-            timeouts.push({
+            list.insert({
                 timeout: suspend,
                 idleAction: ["systemctl", "suspend-then-hibernate"]
             });
-
-        GlobalConfig.general.idle.timeouts = timeouts;
-    }
-
-    // One-time cleanup for any duplicate entries left in shell.json from
-    // earlier issues. Harmless no-op once the file is clean.
-    function dedupeTimeouts(): void {
-        const raw = GlobalConfig.general.idle.timeouts ?? [];
-        const seen = new Set();
-        const out = [];
-        for (const t of raw) {
-            const key = JSON.stringify(t);
-            if (seen.has(key))
-                continue;
-            seen.add(key);
-            out.push(t);
-        }
-        if (out.length !== raw.length)
-            GlobalConfig.general.idle.timeouts = out;
     }
 
     function lockNow(): void {
@@ -211,7 +203,6 @@ Singleton {
         running: true
         interval: 3000
         onTriggered: {
-            root.dedupeTimeouts();
             root.checkAndApply();
         }
     }

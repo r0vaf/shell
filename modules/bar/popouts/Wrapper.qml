@@ -124,9 +124,8 @@ Item {
         shouldBeActive: root.detachedMode === "winfo"
         anchors.centerIn: parent
 
-        sourceComponent: WindowInfo {
+        sourceComponent: WindowList {
             screen: root.screen
-            client: Hypr.activeToplevel
         }
     }
 

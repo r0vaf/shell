@@ -46,32 +46,6 @@ Item {
         return s.join(", ") || "-";
     }
 
-    component ActionButton: StyledRect {
-        id: btn
-
-        property string label
-
-        signal clicked
-
-        Layout.fillWidth: true
-        implicitHeight: btnText.implicitHeight + Tokens.padding.large
-        radius: Tokens.rounding.large
-        color: Colours.palette.m3secondaryContainer
-
-        StyledText {
-            id: btnText
-
-            anchors.centerIn: parent
-            text: btn.label
-            color: Colours.palette.m3onSecondaryContainer
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: btn.clicked()
-        }
-    }
-
     StyledRect {
         z: 1
 
@@ -217,23 +191,6 @@ Item {
                     }
                     Item {
                         Layout.fillHeight: true
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Tokens.spacing.medium
-
-                ActionButton {
-                    label: Tr.tr("Focus")
-                    onClicked: root.shown?.activate()
-                }
-                ActionButton {
-                    label: Tr.tr("Close window")
-                    onClicked: {
-                        root.shown?.close();
-                        root.selected = null;
                     }
                 }
             }

@@ -53,7 +53,7 @@ Item {
     }
 
     implicitWidth: downButton.implicitWidth + upButton.implicitWidth + 65 + Tokens.spacing.extraSmall
-    implicitHeight: spin.implicitHeight
+    implicitHeight: Math.max(downButton.implicitHeight, upButton.implicitHeight)
 
     T.SpinBox {
         id: spin
@@ -75,18 +75,17 @@ Item {
             root.valueModified();
         }
 
+        leftPadding: downButton.implicitWidth + Tokens.spacing.extraSmall / 2
+        rightPadding: upButton.implicitWidth + Tokens.spacing.extraSmall / 2
+
         contentItem: TextFieldBase {
             text: spin.textFromValue(spin.value, spin.locale)
+            Component.onCompleted: {
+            }
 
             readOnly: !spin.editable
             validator: spin.validator
             inputMethodHints: Qt.ImhFormattedNumbersOnly
-
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: downButton.right
-            anchors.right: upButton.left
-            anchors.leftMargin: Tokens.spacing.extraSmall / 2
-            anchors.rightMargin: Tokens.spacing.extraSmall / 2
 
             leftPadding: Tokens.padding.medium
             rightPadding: Tokens.padding.medium
@@ -95,6 +94,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
 
             background: StyledRect {
+                anchors.fill: parent
                 radius: Tokens.rounding.extraSmall
                 color: Colours.layer(Colours.palette.m3surfaceContainerHighest, root.cLayer)
             }

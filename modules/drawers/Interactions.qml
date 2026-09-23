@@ -56,6 +56,8 @@ CustomMouseArea {
             return;
         if (event.x < bar.implicitWidth) {
             bar.handleWheel(event.y, event.angleDelta);
+        } else if (popouts.hasCurrent && inLeftPanel(panels.popoutsWrapper, event.x, event.y)) {
+            event.accepted = false;
         }
     }
 
@@ -85,6 +87,19 @@ CustomMouseArea {
 
         if (screenState.sidebar && Config.sidebar.enabled && !inRightPanel(panels.sidebar, x, y) && !inRightPanel(panels.sessionWrapper, x, y))
             screenState.sidebar = false;
+
+        // Click-outside-to-close only catches clicks that land on the shell's
+        // own surface (e.g. empty desktop) -- if the click lands on another
+        // window's surface instead, the compositor delivers it there, not to
+        // us. Hyprland's removed HyprlandFocusGrab used a compositor-level
+        // grab across ALL surfaces to catch those too; river has no
+        // equivalent, so this popout stays open until you Esc, re-trigger it,
+        // or the shell is told the window under it changed (which it currently
+        // isn't -- river doesn't forward foreign-toplevel focus changes here).
+        if (popouts.hasCurrent && !inLeftPanel(panels.popoutsWrapper, x, y)) {
+            popouts.hasCurrent = false;
+            bar.closeTray();
+        }
     }
     onContainsMouseChanged: {
         if (!containsMouse) {

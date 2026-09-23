@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Wayland
 import Quickshell.Widgets
 import Caelestia.Config
@@ -12,88 +13,67 @@ Item {
 
     required property PopoutState popouts
 
-    implicitWidth: Hypr.activeToplevel ? child.implicitWidth : -Tokens.padding.extraLargeIncreased
+    required property ShellScreen screen
+
+    implicitWidth: list.count > 0 ? child.implicitWidth : -Tokens.padding.extraLargeIncreased
     implicitHeight: child.implicitHeight
 
     Column {
         id: child
 
-        anchors.centerIn: parent
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
         spacing: Tokens.spacing.medium
+        width: list.width
 
-        RowLayout {
-            id: detailsRow
+        ListView {
+            id: list
 
-            anchors.left: parent.left
-            anchors.right: parent.right
-            spacing: Tokens.spacing.medium
+            width: Tokens.sizes.bar.windowPreviewSize
+            height: Math.min(contentHeight, 280)
+            clip: true
+            spacing: Tokens.spacing.small
+            model: Hypr.toplevels
+            boundsBehavior: Flickable.StopAtBounds
 
-            IconImage {
-                id: icon
 
-                asynchronous: true
-                Layout.alignment: Qt.AlignVCenter
-                implicitSize: details.implicitHeight
-                source: Icons.getAppIcon(Hypr.activeToplevel?.appId ?? "", "image-missing")
-            }
+            delegate: RowLayout {
+                id: row
 
-            ColumnLayout {
-                id: details
+                required property var modelData
 
-                spacing: 0
-                Layout.fillWidth: true
+                width: ListView.view.width
+                spacing: Tokens.spacing.medium
 
-                StyledText {
+                IconImage {
+                    id: rowIcon
+
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitSize: rowDetails.implicitHeight
+                    source: Icons.getAppIcon(row.modelData.appId ?? "", "image-missing")
+                }
+
+                ColumnLayout {
+                    id: rowDetails
+
+                    spacing: 0
                     Layout.fillWidth: true
-                    text: Hypr.activeToplevel?.title ?? ""
-                    font: Tokens.font.body.medium
-                    elide: Text.ElideRight
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: row.modelData.title || Tr.tr("Unknown")
+                        font: Tokens.font.body.medium
+                        elide: Text.ElideRight
+                        color: row.modelData.activated ? Colours.palette.m3primary : Colours.palette.m3onSurface
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: row.modelData.appId ?? ""
+                        color: row.modelData.activated ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                        elide: Text.ElideRight
+                    }
                 }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: Hypr.activeToplevel?.appId ?? ""
-                    color: Colours.palette.m3onSurfaceVariant
-                    elide: Text.ElideRight
-                }
-            }
-
-            Item {
-                implicitWidth: expandIcon.implicitHeight + Tokens.padding.small
-                implicitHeight: expandIcon.implicitHeight + Tokens.padding.small
-
-                Layout.alignment: Qt.AlignVCenter
-
-                StateLayer {
-                    radius: Tokens.rounding.large
-                    onClicked: root.popouts.detachRequested("winfo")
-                }
-
-                MaterialIcon {
-                    id: expandIcon
-
-                    anchors.centerIn: parent
-                    anchors.horizontalCenterOffset: font.pointSize * 0.05
-
-                    text: "chevron_right"
-
-                    fontStyle: Tokens.font.icon.large
-                }
-            }
-        }
-
-        ClippingWrapperRectangle {
-            color: "transparent"
-            radius: Tokens.rounding.medium
-
-            ScreencopyView {
-                id: preview
-
-                captureSource: Hypr.activeToplevel ?? null // qmllint disable unresolved-type
-                live: visible
-
-                constraintSize.width: Tokens.sizes.bar.windowPreviewSize
-                constraintSize.height: Tokens.sizes.bar.windowPreviewSize
             }
         }
     }

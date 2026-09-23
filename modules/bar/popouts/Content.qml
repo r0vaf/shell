@@ -33,6 +33,7 @@ Item {
             name: "activewindow"
             sourceComponent: ActiveWindow {
                 popouts: root.popouts
+                screen: root.screen
             }
         }
 

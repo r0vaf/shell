@@ -88,7 +88,9 @@ StyledWindow {
     WlrLayershell.layer: (fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen) || (hasSpecialWorkspace && hasFullscreenOnNormalWs) ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: screenState.launcher || screenState.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
-    mask: hasFullscreen ? emptyRegion : regions
+    readonly property bool anyDismissable: screenState.launcher || screenState.session || screenState.sidebar || panels.popouts.hasCurrent
+
+    mask: hasFullscreen ? emptyRegion : (anyDismissable ? fullRegion : regions)
 
     anchors.top: true
     anchors.bottom: true
@@ -101,6 +103,15 @@ StyledWindow {
 
     Behavior on surfaceColour {
         CAnim {}
+    }
+
+    Region {
+        id: fullRegion
+
+        x: 0
+        y: 0
+        width: root.width
+        height: root.height
     }
 
     Region {

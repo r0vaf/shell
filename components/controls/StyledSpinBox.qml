@@ -52,7 +52,7 @@ Item {
         valueModified();
     }
 
-    implicitWidth: spin.implicitWidth
+    implicitWidth: downButton.implicitWidth + upButton.implicitWidth + 65 + Tokens.spacing.extraSmall
     implicitHeight: spin.implicitHeight
 
     T.SpinBox {
@@ -75,15 +75,18 @@ Item {
             root.valueModified();
         }
 
-        leftPadding: up.indicator.implicitWidth + Tokens.spacing.extraSmall / 2
-        rightPadding: down.indicator.implicitWidth + Tokens.spacing.extraSmall / 2
-
         contentItem: TextFieldBase {
             text: spin.textFromValue(spin.value, spin.locale)
 
             readOnly: !spin.editable
             validator: spin.validator
             inputMethodHints: Qt.ImhFormattedNumbersOnly
+
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.left: downButton.right
+            anchors.right: upButton.left
+            anchors.leftMargin: Tokens.spacing.extraSmall / 2
+            anchors.rightMargin: Tokens.spacing.extraSmall / 2
 
             leftPadding: Tokens.padding.medium
             rightPadding: Tokens.padding.medium
@@ -99,6 +102,9 @@ Item {
 
         down.indicator: IconButton {
             id: downButton
+
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
 
             topRightRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
             bottomRightRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
@@ -135,6 +141,7 @@ Item {
             id: upButton
 
             anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
 
             topLeftRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
             bottomLeftRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall

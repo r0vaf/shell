@@ -35,16 +35,19 @@ PageBase {
             }
         }
 
-        // Parsed from the caelestia CLI's package listing; the sh wrapper avoids a
-        // warning when the (optional) CLI isn't installed
+        // Reads the installed package's version via importlib.metadata rather than
+        // parsing `caelestia --version`'s human-readable report, which only embeds a
+        // parseable package version string in its Arch "Packages:" section - on any
+        // other distro (pip/pipx install, PikaOS included) that section never
+        // appears, so the old regex against that output always failed and the field
+        // was stuck on the "…" fallback. importlib.metadata works the same way
+        // everywhere the CLI is actually installed, Arch or not. The sh wrapper
+        // avoids a warning when the (optional) CLI isn't installed.
         Process {
             running: true
-            command: ["sh", "-c", "caelestia --version 2>/dev/null"]
+            command: ["sh", "-c", "python3 -c \"from importlib.metadata import version, PackageNotFoundError\nimport sys\ntry:\n    print(version('caelestia'))\nexcept PackageNotFoundError:\n    sys.exit(1)\" 2>/dev/null"]
             stdout: StdioCollector {
-                onStreamFinished: {
-                    const m = text.match(/caelestia-cli\S*\s+(\d+(?:\.\d+)*)/);
-                    root.cliVersion = m ? m[1] : "";
-                }
+                onStreamFinished: root.cliVersion = text.trim()
             }
         }
 

@@ -59,7 +59,7 @@ PageBase {
             last: true
             icon: "dock_to_right"
             text: qsTr("Arrange displays")
-            subtext: qsTr("Mirror or extend")
+            subtext: WlrRandr.describeLayout() || qsTr("Mirror or extend")
             onClicked: root.nState.openSubPage(2)
         }
 

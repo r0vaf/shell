@@ -13,7 +13,7 @@ Singleton {
     property bool available: true
 
     function setTemp(kelvin: int): void {
-        Quickshell.execDetached(["sh", "-c", "pkill wlsunset 2>/dev/null; wlsunset -T " + kelvin + " -t " + kelvin]);
+        Quickshell.execDetached(["sh", "-c", "pkill wlsunset 2>/dev/null; wlsunset -S 00:00 -s 00:01 -T 6501 -t " + kelvin]);
         persisted.temp = kelvin;
     }
 
@@ -22,21 +22,46 @@ Singleton {
         persisted.temp = -1;
     }
 
-    PersistentProperties {
-        id: persisted
+    // Guards applyStartupTemp() so it only fires once, the first time
+    // persisted.temp reflects real loaded data (or confirmed absence of a
+    // file). blockLoading on FileView does NOT guarantee adapter properties
+    // are populated synchronously - only text()/data() calls block - so the
+    // restore has to react to the adapter's own change signal instead of
+    // assuming a fixed point (e.g. Component.onCompleted) is late enough.
+    property bool startupHandled: false
 
-        property int temp: -1
-
-        reloadableId: "wlsunset"
+    function applyStartupTemp(): void {
+        if (root.startupHandled)
+            return;
+        root.startupHandled = true;
+        if (persisted.temp > 0)
+            Quickshell.execDetached(["sh", "-c", "pkill wlsunset 2>/dev/null; wlsunset -S 00:00 -s 00:01 -T 6501 -t " + persisted.temp]);
     }
 
-    // Checks wlsunset is installed and re-applies the persisted temperature
-    // on shell startup — this is what let you retire the NIGHTLIGHT_TEMP
-    // handling in quicksettings-restore.sh.
+    FileView {
+        id: stateFile
+        path: `${Quickshell.env("HOME")}/.local/state/caelestia/nightlight.json`
+        printErrors: false
+
+        onLoadFailed: error => {
+            if (error === FileViewError.FileNotFound)
+                stateFile.writeAdapter();
+            // Nothing to restore either way once we know the load is done.
+            root.applyStartupTemp();
+        }
+        onAdapterUpdated: stateFile.writeAdapter()
+
+        adapter: JsonAdapter {
+            id: persisted
+            property int temp: -1
+            // Fires once real data (including a value unchanged from -1,
+            // if that's genuinely what was saved) is applied post-load.
+            onTempChanged: root.applyStartupTemp()
+        }
+    }
+
     Component.onCompleted: {
         checkProc.running = true;
-        if (persisted.temp > 0)
-            Quickshell.execDetached(["sh", "-c", "pkill wlsunset 2>/dev/null; wlsunset -T " + persisted.temp + " -t " + persisted.temp]);
     }
 
     Process {

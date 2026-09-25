@@ -26,6 +26,17 @@ PageBase {
             text: qsTr("Layout")
         }
 
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: Tokens.padding.small
+            Layout.bottomMargin: Tokens.spacing.extraSmall
+            visible: text.length > 0
+            text: WlrRandr.describeLayout()
+            color: Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.label.small
+            elide: Text.ElideRight
+        }
+
         RowButton {
             first: true
             icon: "flip_to_front"
@@ -41,6 +52,14 @@ PageBase {
             subtext: qsTr("Place additional displays to the right of %1").arg(root.primary?.name ?? "")
             trailingIcon: ""
             onClicked: WlrRandr.arrange("extend-right")
+        }
+
+        RowButton {
+            icon: "arrow_back"
+            text: qsTr("Extend left")
+            subtext: qsTr("Place additional displays to the left of %1").arg(root.primary?.name ?? "")
+            trailingIcon: ""
+            onClicked: WlrRandr.arrange("extend-left")
         }
 
         RowButton {
